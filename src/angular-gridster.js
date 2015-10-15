@@ -84,9 +84,9 @@
 			};
 
 			/**
-			 * A positional array of the items in the grid
+			 * A list of items managed by gridster
 			 */
-			this.grid = [];
+			this.allItems = [];
 
 			/**
 			 * Clean up after yourself
@@ -148,6 +148,19 @@
 				return row > -1 && column > -1 && item.sizeX + column <= this.columns && item.sizeY + row <= this.maxRows;
 			};
 
+			this.doesItemOccupy = function(item, row, col) {
+				return (row >= item.row) && (row < item.row + item.sizeY) &&
+					(col >= item.col) && (col < item.col + item.sizeX);
+			};
+
+			this.doesItemIntersect = function(item, row, col, sizeX, sizeY) {
+				var rowStart = Math.max(item.row, row);
+				var rowEnd = Math.min(item.row + item.sizeY, row + sizeY);
+				var colStart = Math.max(item.col, col);
+				var colEnd = Math.min(item.col + item.sizeX, col + sizeX);
+				return (rowStart < rowEnd) && (colStart < colEnd);
+			};
+
 			/**
 			 * Set the item in the first suitable position
 			 *
@@ -186,10 +199,11 @@
 				if (excludeItems && !(excludeItems instanceof Array)) {
 					excludeItems = [excludeItems];
 				}
-				for (var h = 0; h < sizeY; ++h) {
-					for (var w = 0; w < sizeX; ++w) {
-						var item = this.getItem(row + h, column + w, excludeItems);
-						if (item && (!excludeItems || excludeItems.indexOf(item) === -1) && items.indexOf(item) === -1) {
+
+				for (var index = 0, count = this.allItems.length; index < count; index++) {
+					var item = this.allItems[index];
+					if (this.doesItemIntersect(item, row, column, sizeX, sizeY)) {
+						if ((!excludeItems || excludeItems.indexOf(item) === -1) && items.indexOf(item) === -1) {
 							items.push(item);
 						}
 					}
@@ -243,16 +257,9 @@
 			 * @param {Object} item
 			 */
 			this.removeItem = function(item) {
-				for (var rowIndex = 0, l = this.grid.length; rowIndex < l; ++rowIndex) {
-					var columns = this.grid[rowIndex];
-					if (!columns) {
-						continue;
-					}
-					var index = columns.indexOf(item);
-					if (index !== -1) {
-						columns[index] = null;
-						break;
-					}
+				var index = this.allItems.indexOf(item);
+				if (index !== -1) {
+					this.allItems.splice(index, 1);
 				}
 				this.layoutChanged();
 			};
@@ -269,25 +276,16 @@
 				if (excludeItems && !(excludeItems instanceof Array)) {
 					excludeItems = [excludeItems];
 				}
-				var sizeY = 1;
-				while (row > -1) {
-					var sizeX = 1,
-						col = column;
-					while (col > -1) {
-						var items = this.grid[row];
-						if (items) {
-							var item = items[col];
-							if (item && (!excludeItems || excludeItems.indexOf(item) === -1) && item.sizeX >= sizeX && item.sizeY >= sizeY) {
-								return item;
-							}
-						}
-						++sizeX;
-						--col;
+
+				var result = null;
+				for (var index = 0, count = this.allItems.length; index < count; index++) {
+					var item = this.allItems[index];
+					if (this.doesItemOccupy(item, row, column)) {
+						result = item;
 					}
-					--row;
-					++sizeY;
 				}
-				return null;
+
+				return result;
 			};
 
 			/**
@@ -326,20 +324,16 @@
 					row = Math.min(this.maxRows - item.sizeY, Math.max(0, row));
 				}
 
-				// check if item is already in grid
+				if (this.allItems.indexOf(item) === -1) {
+					this.allItems.push(item);
+				}
+
+				// check if the item is already in the requested position
 				if (item.oldRow !== null && typeof item.oldRow !== 'undefined') {
-					var samePosition = item.oldRow === row && item.oldColumn === column;
-					var inGrid = this.grid[row] && this.grid[row][column] === item;
-					if (samePosition && inGrid) {
+					if ((item.oldRow === row) && (item.oldColumn === column)) {
 						item.row = row;
 						item.col = column;
 						return;
-					} else {
-						// remove from old position
-						var oldRow = this.grid[item.oldRow];
-						if (oldRow && oldRow[item.oldColumn] === item) {
-							delete oldRow[item.oldColumn];
-						}
 					}
 				}
 
@@ -347,11 +341,6 @@
 				item.oldColumn = item.col = column;
 
 				this.moveOverlappingItems(item, ignoreItems);
-
-				if (!this.grid[row]) {
-					this.grid[row] = [];
-				}
-				this.grid[row][column] = item;
 
 				if (this.movingItem === item) {
 					this.floatItemUp(item);
@@ -366,9 +355,6 @@
 			 * @param {Object} item2
 			 */
 			this.swapItems = function(item1, item2) {
-				this.grid[item1.row][item1.col] = item2;
-				this.grid[item2.row][item2.col] = item1;
-
 				var item1Row = item1.row;
 				var item1Col = item1.col;
 				item1.row = item2.row;
@@ -465,17 +451,9 @@
 				if (this.floating === false) {
 					return;
 				}
-				for (var rowIndex = 0, l = this.grid.length; rowIndex < l; ++rowIndex) {
-					var columns = this.grid[rowIndex];
-					if (!columns) {
-						continue;
-					}
-					for (var colIndex = 0, len = columns.length; colIndex < len; ++colIndex) {
-						var item = columns[colIndex];
-						if (item) {
-							this.floatItemUp(item);
-						}
-					}
+				for (var index = 0, count = this.allItems.length; index < count; index++) {
+					var item = this.allItems[index];
+					this.floatItemUp(item);
 				}
 			};
 
@@ -517,18 +495,15 @@
 			this.updateHeight = function(plus) {
 				var maxHeight = this.minRows;
 				plus = plus || 0;
-				for (var rowIndex = this.grid.length; rowIndex >= 0; --rowIndex) {
-					var columns = this.grid[rowIndex];
-					if (!columns) {
-						continue;
-					}
-					for (var colIndex = 0, len = columns.length; colIndex < len; ++colIndex) {
-						if (columns[colIndex]) {
-							maxHeight = Math.max(maxHeight, rowIndex + plus + columns[colIndex].sizeY);
-						}
-					}
+				for (var index = 0, count = this.allItems.length; index < count; index++) {
+					var item = this.allItems[index];
+					maxHeight = Math.max(maxHeight, item.row + item.sizeY + plus);
 				}
-				this.gridHeight = this.maxRows - maxHeight > 0 ? Math.min(this.maxRows, maxHeight) : Math.max(this.maxRows, maxHeight);
+				if (this.maxRows - maxHeight > 0) {
+					this.gridHeight = Math.min(this.maxRows, maxHeight);
+				} else {
+					this.gridHeight = Math.max(this.maxRows, maxHeight);
+				}
 			};
 
 			/**
@@ -688,20 +663,11 @@
 							}
 
 							// loop through all items and reset their CSS
-							for (var rowIndex = 0, l = gridster.grid.length; rowIndex < l; ++rowIndex) {
-								var columns = gridster.grid[rowIndex];
-								if (!columns) {
-									continue;
-								}
-
-								for (var colIndex = 0, len = columns.length; colIndex < len; ++colIndex) {
-									if (columns[colIndex]) {
-										var item = columns[colIndex];
-										item.setElementPosition();
-										item.setElementSizeY();
-										item.setElementSizeX();
-									}
-								}
+							for (var index = 0, count = gridster.allItems.length; index < count; index++) {
+								var item = gridster.allItems[index];
+								item.setElementPosition();
+								item.setElementSizeY();
+								item.setElementSizeX();
 							}
 
 							updateHeight();
