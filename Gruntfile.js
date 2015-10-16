@@ -66,11 +66,8 @@ module.exports = function(grunt) {
 		},
 		less: {
 			dist: {
-				options: {
-					compress: true
-				},
 				files: {
-					"dist/angular-gridster.min.css": "src/angular-gridster.less"
+					"dist/angular-gridster.css": "src/angular-gridster.less"
 				}
 			}
 		},
