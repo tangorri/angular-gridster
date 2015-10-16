@@ -1322,8 +1322,8 @@
 		};
 	}])
 
-	.factory('GridsterDraggable', ['$document', '$window', 'GridsterTouch',
-		function($document, $window, GridsterTouch) {
+	.factory('GridsterDraggable', ['$document', '$timeout', '$window', 'GridsterTouch',
+		function($document, $timeout, $window, GridsterTouch) {
 			function GridsterDraggable($el, scope, gridster, item, itemOptions) {
 
 				var elmX, elmY, elmW, elmH,
@@ -1337,7 +1337,10 @@
 
 					minTop = 0,
 					maxTop = 9999,
-					minLeft = 0;
+					minLeft = 0,
+
+					autoScrollTimeout = 50,
+					continueScrolling = null;
 
 				var originalCol, originalRow;
 				var inputTags = ['select', 'input', 'textarea', 'button'];
@@ -1470,7 +1473,7 @@
 					});
 				}
 
-				function correctScrollPosition() {
+				function correctScrollPosition(event) {
 					var delta = null,
 						maxScrollTop = null,
 						scrollSensitivity = gridster.draggable.scrollSensitivity,
@@ -1483,28 +1486,33 @@
 							width: scrollContainer.getClientRects()[0].width
 						};
 
+					if (continueScrolling) {
+						$timeout.cancel(continueScrolling);
+					}
+
 					if (event.pageY - viewport.top < scrollSensitivity) {
 						delta = Math.max(scrollContainer.scrollTop - scrollSpeed, 0) - scrollContainer.scrollTop;
 						scrollContainer.scrollTop += delta;
 						mOffY += delta;
+						scheduleContinuedScrolling(event);
 					} else if (viewport.height - (event.pageY - viewport.top) < scrollSensitivity) {
 						maxScrollTop = scrollContainer.scrollHeight - (viewport.height - viewport.top) + scrollSensitivity;
 						delta = Math.min(maxScrollTop, scrollContainer.scrollTop + scrollSpeed) - scrollContainer.scrollTop;
 						scrollContainer.scrollTop += delta;
 						mOffY += delta;
-					}
-
-					if (event.pageX - viewport.left < scrollSensitivity) {
-						scrollContainer.scrollLeft = scrollContainer.scrollLeft - scrollSpeed;
-						mOffX -= scrollSpeed;
-					} else if (viewport.width - (event.pageX - viewport.left) < scrollSensitivity) {
-						scrollContainer.scrollLeft = scrollContainer.scrollLeft + scrollSpeed;
-						mOffX += scrollSpeed;
+						scheduleContinuedScrolling(event);
 					}
 				}
 
+				function scheduleContinuedScrolling(event) {
+					$timeout.cancel(continueScrolling);
+					continueScrolling = $timeout(function() {
+						mouseMove(event);
+					}, autoScrollTimeout);
+				}
+
 				function drag(event) {
-					correctScrollPosition();
+					correctScrollPosition(event);
 
 					var oldRow = item.row,
 						oldCol = item.col,
