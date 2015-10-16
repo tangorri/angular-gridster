@@ -1,3 +1,17 @@
+/* WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING*/
+/* WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING*/
+/*                                                                                                        */
+/*                                                                                                        */
+/*                  This version of AngularGridster is derived from our own source code.                  */
+/*                  If you want to pick up a new version of AngularGridster, you must                     */
+/*                  Check out https://github.com/aminer-looker/angular-gridster and pull                  */
+/*                  In the changes to that project, resolve any conflicts, and then copy                  */
+/*                  the source back into Helltool. Doing otherwise will break Looker!                     */
+/*                                                                                                        */
+/*                                                                                                        */
+/* WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING*/
+/* WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING WARNING*/
+
 /*global define:true*/
 (function(root, factory) {
 
