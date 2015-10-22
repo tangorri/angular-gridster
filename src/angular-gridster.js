@@ -1461,7 +1461,7 @@
 					scope.$apply(function() {
 						var cancel = null;
 						if (gridster.draggable && gridster.draggable.start) {
-							cancel = gridster.draggable.start(event, $el, itemOptions);
+							cancel = gridster.draggable.start(event, $el, itemOptions, item);
 						}
 
 						if (cancel !== 'cancel') {
@@ -1570,7 +1570,7 @@
 					if (hasCallback || oldRow !== item.row || oldCol !== item.col) {
 						scope.$apply(function() {
 							if (hasCallback) {
-								gridster.draggable.drag(event, $el, itemOptions);
+								gridster.draggable.drag(event, $el, itemOptions, item);
 							}
 						});
 					}
@@ -1589,7 +1589,7 @@
 
 					scope.$apply(function() {
 						if (gridster.draggable && gridster.draggable.stop) {
-							gridster.draggable.stop(event, $el, itemOptions);
+							gridster.draggable.stop(event, $el, itemOptions, item);
 						}
 					});
 				}
